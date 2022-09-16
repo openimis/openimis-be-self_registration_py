@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('webapp', '0010_auto_20210623_0809'),
+        ('self_registration', '0010_auto_20210623_0809'),
     ]
 
     operations = [

@@ -1,6 +1,6 @@
 [
 {
-    "model": "webapp.chfidtempinsuree",
+    "model": "self_registration.chfidtempinsuree",
     "pk": 1,
     "fields": {
         "chfid": "12321213123",
@@ -10,7 +10,7 @@
     }
 },
 {
-    "model": "webapp.chfidtempinsuree",
+    "model": "self_registration.chfidtempinsuree",
     "pk": 2,
     "fields": {
         "chfid": "121212121",

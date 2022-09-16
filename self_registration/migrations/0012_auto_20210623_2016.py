@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('insuree', '0004_confirmationtype_education_profession_relation'),
-        ('webapp', '0011_auto_20210623_0809'),
+        ('self_registration', '0011_auto_20210623_0809'),
     ]
 
     operations = [

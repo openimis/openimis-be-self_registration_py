@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('location', '0005_healthfacilitycatchment_healthfacilitylegalform_healthfacilitymutation_healthfacilitysublevel'),
-        ('webapp', '0005_auto_20210530_2156'),
+        ('self_registration', '0005_auto_20210530_2156'),
     ]
 
     operations = [

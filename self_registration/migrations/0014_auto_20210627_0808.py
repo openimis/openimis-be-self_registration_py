@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('insuree', '0004_confirmationtype_education_profession_relation'),
-        ('webapp', '0013_auto_20210623_2131'),
+        ('self_registration', '0013_auto_20210623_2131'),
     ]
 
     operations = [
@@ -21,7 +21,7 @@ class Migration(migrations.Migration):
                 ('email', models.EmailField(max_length=254, null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True, null=True, verbose_name='date added')),
                 ('updated_at', models.DateTimeField(auto_now_add=True, null=True, verbose_name='date added')),
-                ('insuree', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='webapp_insuree_profile', to='insuree.Insuree')),
+                ('insuree', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='self_registration_insuree_profile', to='insuree.Insuree')),
             ],
         ),
         migrations.AlterField(
