@@ -8,12 +8,12 @@ with open(os.path.join(os.path.dirname(__file__), 'README.md')) as readme:
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
-    name='openimis-be-webapp',
+    name='openimis-be-self-registration',
     version='1.0.0',
     packages=find_packages(),
     include_package_data=True,
     license='GNU AGPL v3',
-    description='The openIMIS Webapp reference module.',
+    description='The openIMIS self registration reference module.',
     # long_description=README,
     url='https://openimis.org/',
     author='Tinker Technology',
@@ -34,7 +34,7 @@ setup(
     classifiers=[
         'Environment :: Web Environment',
         'Framework :: Django',
-        'Framework :: Django :: 2.1',
+        'Framework :: Django :: 3.0',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: GNU Affero General Public License v3',
         'Operating System :: OS Independent',
