@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('webapp', '0008_voucherpayment_vocher_id'),
+        ('self_registration', '0008_voucherpayment_vocher_id'),
     ]
 
     operations = [

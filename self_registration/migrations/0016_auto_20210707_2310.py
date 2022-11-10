@@ -8,7 +8,7 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('webapp', '0015_auto_20210704_2249'),
+        ('self_registration', '0015_auto_20210704_2249'),
     ]
 
     operations = [

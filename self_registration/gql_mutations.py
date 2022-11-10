@@ -59,7 +59,7 @@ from .models import Profile
 
 
 class CreateOrUpdateProfileMutation(graphene.Mutation):
-    # _mutation_module = "webapp"
+    # _mutation_module = "self_registration"
     # _mutation_class = "CreateNoticeMutation"
     class Arguments(object):
         file = graphene.List(graphene.String)
@@ -89,7 +89,7 @@ from .models import Notification
 
 
 class CreateVoucherPaymentMutation(graphene.Mutation):
-    # _mutation_module = "webapp"
+    # _mutation_module = "self_registration"
     # _mutation_class = "CreateNoticeMutation"
     class Arguments(object):
         file = graphene.List(graphene.String)

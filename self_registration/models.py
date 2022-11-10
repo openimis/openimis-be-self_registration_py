@@ -72,7 +72,7 @@ class Notification(models.Model):
 from django.db.models.signals import post_save, post_delete, pre_save
 
 class Profile(models.Model):
-    insuree = models.ForeignKey(insuree_models.Insuree, on_delete=models.CASCADE, related_name="webapp_insuree_profile")
+    insuree = models.ForeignKey(insuree_models.Insuree, on_delete=models.CASCADE, related_name="self_registration_insuree_profile")
     phone = models.CharField(max_length=15, null=True)
     photo = models.ImageField(upload_to="insuree/photo")
     email = models.EmailField(null=True)
