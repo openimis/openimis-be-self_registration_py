@@ -45,10 +45,14 @@ class ExtendedConnection(Connection):
     edge_count = Int()
 
     def resolve_total_count(root, info, **kwargs):
+        if not info.context.user.is_authenticated:
+            raise PermissionDenied(_("unauthorized"))
         print(root.length)
         return root.length
 
     def resolve_edge_count(root, info, **kwargs):
+        if not info.context.user.is_authenticated:
+            raise PermissionDenied(_("unauthorized"))
         return len(root.edges)
 
 
