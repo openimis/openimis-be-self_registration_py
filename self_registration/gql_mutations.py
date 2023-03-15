@@ -5,7 +5,10 @@ import graphene
 from core.schema import OpenIMISMutation
 from graphql import GraphQLError
 from insuree.schema import InsureeGQLType
+from .apps import SelfRegistrationConfig
 from .models import ChfidTempInsuree
+from django.utils.translation import gettext as _
+from django.core.exceptions import PermissionDenied
 
 def dfprint(i):
     print(i)
@@ -77,7 +80,12 @@ class CreateOrUpdateProfileMutation(graphene.Mutation):
         print(insuree_obj.pk)
         instance = Profile.objects.filter(insuree_id=insuree_obj.pk).first()
         if not instance:
+            if not info.context.user.has_perms(SelfRegistrationConfig.gql_mutation_add_profile_perms):
+                raise PermissionDenied(_("unauthorized"))
             instance = Profile()
+        else:
+            if not info.context.user.has_perms(SelfRegistrationConfig.gql_mutation_update_profile_perms):
+                raise PermissionDenied(_("unauthorized"))
         instance.photo = files.get('file') if files.get('file') else instance.photo
         instance.email = email if email else instance.email
         instance.phone = phone if phone else instance.phone
@@ -99,6 +107,8 @@ class CreateVoucherPaymentMutation(graphene.Mutation):
 
     # @classmethod
     def mutate(self, info, file, insuree):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_mutation_add_voucher_perms):
+            raise PermissionDenied(_("unauthorized"))
         files = info.context.FILES
         insuree_obj = insuree_models.Insuree.objects.filter(chf_id=insuree).first()
         VoucherPayment.objects.create(voucher=files.get('file'), insuree=insuree_obj)
@@ -142,6 +152,8 @@ class CreateFeedbackMutation(graphene.Mutation):
 
     @classmethod
     def mutate(cls, root, info, **kwargs):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_mutation_add_feedback_perms):
+            raise PermissionDenied(_("unauthorized"))
         print(kwargs)
         feedback = Feedback.objects.create(**kwargs)
         return CreateFeedbackMutation(feedback=feedback)
@@ -158,6 +170,8 @@ class CreateNoticeMutation(OpenIMISMutation):  # graphene.relay.ClientIDMutation
 
     @classmethod
     def mutate_and_get_payload(cls, root, info, **input):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_mutation_add_notification_perms):
+            raise PermissionDenied(_("unauthorized"))
         print('CreateNoticeMutation mutate')
         data = input
         if "client_mutation_id" in data:
@@ -180,6 +194,8 @@ class UpdateNoticeMutation(OpenIMISMutation):
 
     @classmethod
     def mutate_and_get_payload(cls, root, info, **input):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_mutation_update_notification_perms):
+            raise PermissionDenied(_("unauthorized"))
         dfprint('UpdateNoticeMutation mutate')
         data = input
         if "client_mutation_id" in data:
@@ -202,6 +218,8 @@ class DeleteNoticeMutation(graphene.Mutation):
 
     @classmethod
     def mutate(self, info, cls, id):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_mutation_delete_notification_perms):
+            raise PermissionDenied(_("unauthorized"))
         try:
             notice = Notice.objects.filter(pk=id).first()
             notice.active = False  # soft_delete
@@ -224,6 +242,8 @@ class CreateTempRegInsureeMutation(graphene.Mutation):
 
     @classmethod
     def mutate(self, info, cls, **kwargs):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_mutation_add_insuree_reg_perms):
+            raise PermissionDenied(_("unauthorized"))
         dfprint(kwargs)
         inp_json = kwargs['json']
         str_json = json.dumps(inp_json)  # stringify json to save imp_json.get("Isurees"]
@@ -398,6 +418,8 @@ class CreateInsureeMutation(graphene.Mutation):
 
     @classmethod
     def mutate(self, info, cls, **kwargs):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_mutation_add_insuree_perms):
+            raise PermissionDenied(_("unauthorized"))
         dfprint('CreateInsureeMutation mutate')
         message = ""
         try:
