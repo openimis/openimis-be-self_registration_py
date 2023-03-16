@@ -47,7 +47,6 @@ class ExtendedConnection(Connection):
     def resolve_total_count(root, info, **kwargs):
         if not info.context.user.is_authenticated:
             raise PermissionDenied(_("unauthorized"))
-        print(root.length)
         return root.length
 
     def resolve_edge_count(root, info, **kwargs):
@@ -79,9 +78,7 @@ class CreateOrUpdateProfileMutation(graphene.Mutation):
     # @classmethod
     def mutate(self, info, file, insureeCHFID, email, phone):
         files = info.context.FILES
-        print(files)
         insuree_obj = insuree_models.Insuree.objects.filter(chf_id=insureeCHFID).first()
-        print(insuree_obj.pk)
         instance = Profile.objects.filter(insuree_id=insuree_obj.pk).first()
         if not instance:
             if not info.context.user.has_perms(SelfRegistrationConfig.gql_mutation_add_profile_perms):
@@ -158,7 +155,6 @@ class CreateFeedbackMutation(graphene.Mutation):
     def mutate(cls, root, info, **kwargs):
         if not info.context.user.has_perms(SelfRegistrationConfig.gql_mutation_add_feedback_perms):
             raise PermissionDenied(_("unauthorized"))
-        print(kwargs)
         feedback = Feedback.objects.create(**kwargs)
         return CreateFeedbackMutation(feedback=feedback)
 
@@ -307,7 +303,6 @@ def process_family(args):
 
         }
         family_create["head_insuree_id"] = insuree_.id
-        print('familty-save-after', family_create)
         family = insuree_models.Family.objects.create(**family_create)
         family_id = family.id
     return family_id
@@ -335,7 +330,6 @@ def process_photo(args):
     dfprint('process_photo')
     insuree_save = args.get('insuree_save')
     photo = insuree_save.get('B64Photo')  # dbg_tmp_insuree_photo()
-    # print( insuree_models.__dict__ )
 
     save_path=""
     img_name=""
@@ -429,7 +423,6 @@ class CreateInsureeMutation(graphene.Mutation):
         try:
             pk = kwargs['id']  # access Arguments #13 testing
             temp_insuree = InsureeTempReg.objects.filter(pk=pk).first()
-            print('kwargs----------',kwargs)
             if kwargs.get('is_hold'):
                 temp_insuree.is_hold = True
                 temp_insuree.status_message = kwargs.get('status_message')

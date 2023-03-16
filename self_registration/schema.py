@@ -36,7 +36,7 @@ def gql_auth_insuree(function):
                 if user:
                     return function(*args, **kwargs)
                 token = context.META.get('HTTP_INSUREE_TOKEN')
-                print(token)  # -H 'Insuree-Token: F008CA1' \
+                # -H 'Insuree-Token: F008CA1' \
                 if token:
                     insuree = InsureeAuth.objects.filter(token=token).first()
                     if insuree:
@@ -73,7 +73,6 @@ def get_qs_nearby_hfcoord(latitude, longitude, max_distance=None):
         qs = qs.filter(distance__lt=float(max_distance))
     qs = qs.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
 
-    # print(qs.query) #print(qs.all())
     return qs
 
 
@@ -370,7 +369,6 @@ class Query(graphene.ObjectType):
             return profile
         else:
             insuree_obj = insuree_models.Insuree.objects.filter(chf_id=insureeCHFID).first()
-            print(insuree_obj.__dict__)
             profile = Profile.objects.create(insuree=insuree_obj, email=insuree_obj.email,phone=insuree_obj.phone)
         return profile
 
@@ -419,7 +417,6 @@ class Query(graphene.ObjectType):
     def resolve_track_registration_status(self, info, phone_no):
         if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_insuree_perms):
             raise PermissionDenied(_("unauthorized"))
-        print('asdasd',phone_no)
         reg_status = InsureeTempReg.objects.filter(phone_number=phone_no.strip()).first()
         return reg_status
         
