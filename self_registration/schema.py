@@ -11,6 +11,8 @@ from policy import models as policy_models
 from graphene_django import DjangoObjectType
 from graphene import relay, ObjectType, Connection, Int
 from graphene_django.filter import DjangoFilterConnectionField
+from .apps import SelfRegistrationConfig
+from django.utils.translation import gettext as _
 from .models import InsureeAuth, Notice, HealthFacilityCoordinate
 from graphene_django.registry import Registry
 from .models import  InsureeTempReg
@@ -34,7 +36,7 @@ def gql_auth_insuree(function):
                 if user:
                     return function(*args, **kwargs)
                 token = context.META.get('HTTP_INSUREE_TOKEN')
-                print(token)  # -H 'Insuree-Token: F008CA1' \
+                # -H 'Insuree-Token: F008CA1' \
                 if token:
                     insuree = InsureeAuth.objects.filter(token=token).first()
                     if insuree:
@@ -71,7 +73,6 @@ def get_qs_nearby_hfcoord(latitude, longitude, max_distance=None):
         qs = qs.filter(distance__lt=float(max_distance))
     qs = qs.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
 
-    # print(qs.query) #print(qs.all())
     return qs
 
 
@@ -116,11 +117,15 @@ class ProfileGQLType(DjangoObjectType):
         fields = ['photo', "email", "phone", "insuree", "remaining_days"]
 
     def resolve_photo(self, info):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_insuree_perms):
+            raise PermissionDenied(_("unauthorized"))
         if self.photo:
             self.photo = info.context.build_absolute_uri(self.photo.url)
         return self.photo
 
     def resolve_remaining_days(value_obj, info):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_policy_remaining_days_perms):
+            raise PermissionDenied(_("unauthorized"))
         latest_policy = insuree_models.InsureePolicy.objects.filter(insuree=value_obj.insuree).order_by('-expiry_date').first()
         remaining_days = (latest_policy.expiry_date - date.today()).days
         return remaining_days
@@ -143,25 +148,37 @@ class InsureeProfileGQLType(DjangoObjectType):
     remaining_days = graphene.String()
 
     def resolve_photos(value_obj, info):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_insuree_perms):
+            raise PermissionDenied(_("unauthorized"))
         return value_obj.photos.all
 
     def resolve_insuree_policies(value_obj, info):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_policies_by_insuree_perms):
+            raise PermissionDenied(_("unauthorized"))
         return value_obj.insuree_policies.all()
 
     def resolve_insuree_claim(value_obj, info):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_claims_by_insuree_perms):
+            raise PermissionDenied(_("unauthorized"))
         # return value_obj.insuree.all()
         return claim_models.Claim.objects.filter(insuree=value_obj)
 
     def resolve_recent_policy(value_obj, info):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_policy_recent_perms):
+            raise PermissionDenied(_("unauthorized"))
         latest_policy = insuree_models.InsureePolicy.objects.filter(insuree=value_obj).order_by('-expiry_date').first()
         return latest_policy
 
     def resolve_family_policy(value_obj, info):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_policies_by_family_perms):
+            raise PermissionDenied(_("unauthorized"))
         insuree_policy_obj = insuree_models.InsureePolicy.objects.filter(insuree=value_obj)
         policy_obj = insuree_policy_obj.policy
         return policy_obj
 
     def resolve_remaining_days(value_obj, info):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_policy_remaining_days_perms):
+            raise PermissionDenied(_("unauthorized"))
         latest_policy = insuree_models.InsureePolicy.objects.filter(insuree=value_obj).order_by('-expiry_date').first()
         remaining_days = (latest_policy.expiry_date - date.today()).days
         return remaining_days
@@ -200,7 +217,8 @@ class VoucherPaymentGQLType(DjangoObjectType):
         connection_class = ExtendedConnection
         # @classmethod
     def resolve_voucher(self, info):
-        # print('value_obj',value_obj)
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_voucher_perms):
+            raise PermissionDenied(_("unauthorized"))
         if self.voucher:
             self.voucher = info.context.build_absolute_uri(self.voucher.url)
         return self.voucher
@@ -274,6 +292,8 @@ class Query(graphene.ObjectType):
     #validate_insuree = graphene.Field(TemporaryRegGQLType, card_id=graphene.String(Required=False), phone_number=graphene.String())
 
     def resolve_insuree_auth(self, info, insureeCHFID, familyHeadCHFID, dob, **kwargs):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_insuree_perms):
+            raise PermissionDenied(_("unauthorized"))
         auth = False
         insuree_auth_obj = None
         insuree_obj = insuree_models.Insuree.objects.filter(chf_id=insureeCHFID).filter(dob=dob).first()
@@ -314,48 +334,65 @@ class Query(graphene.ObjectType):
         return insuree_auth_obj
 
     def resolve_insuree_policy(self, info, insureeCHFID):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_policies_by_insuree_perms):
+            raise PermissionDenied(_("unauthorized"))
         policy_obj = policy_models.Policy.filter()
 
     def resolve_notifications(self, info, insureeCHFID, **kwargs):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_insuree_perms):
+            raise PermissionDenied(_("unauthorized"))
         return Notification.objects.filter(chf_id=insureeCHFID).order_by("-created_at")
 
     def resolve_insuree_claim(self, info, claimId):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_claims_by_insuree_perms):
+            raise PermissionDenied(_("unauthorized"))
         return claim_models.Claim.objects.filter(id=claimId)
 
     def resolve_insuree_auth_otp(self, info, chfid, otp):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_insuree_perms):
+            raise PermissionDenied(_("unauthorized"))
         checkotp = InsureeAuth.objects.filter(otp=otp).filter(insuree__chf_id=chfid).first()
         if checkotp:
             return checkotp
         return None
 
     def resolve_insuree_profile(self, info, insureeCHFID, **kwargs):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_insuree_perms):
+            raise PermissionDenied(_("unauthorized"))
         return insuree_models.Insuree.objects.filter(chf_id=insureeCHFID).first()
 
     def resolve_profile(self, info, insureeCHFID):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_insuree_perms):
+            raise PermissionDenied(_("unauthorized"))
         profile = Profile.objects.filter(insuree__chf_id=insureeCHFID).first()
         if profile:
             return profile
         else:
             insuree_obj = insuree_models.Insuree.objects.filter(chf_id=insureeCHFID).first()
-            print(insuree_obj.__dict__)
             profile = Profile.objects.create(insuree=insuree_obj, email=insuree_obj.email,phone=insuree_obj.phone)
         return profile
 
 
     # @gql_auth_insuree
     def resolve_notices(self, info, **kwargs):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_insuree_perms):
+            raise PermissionDenied(_("unauthorized"))
         orderBy = kwargs.get('orderBy', None)
         if not orderBy:
             return Notice.objects.order_by("-created_at")
         return Notice.objects.order_by(*orderBy)
 
     def resolve_feedbacks(self, info, **kwargs):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_insuree_perms):
+            raise PermissionDenied(_("unauthorized"))
         orderBy = kwargs.get('orderBy', None)
         if not orderBy:
             return Feedback.objects.order_by("-created_at")
         return Feedback.objects.order_by(*orderBy)
 
     def resolve_voucher_payments(self, info, **kwargs):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_voucher_perms):
+            raise PermissionDenied(_("unauthorized"))
         orderBy = kwargs.get('orderBy', None)
         return VoucherPayment.objects.order_by(*orderBy)
 
@@ -365,16 +402,21 @@ class Query(graphene.ObjectType):
 
     # @gql_auth_insuree
     def resolve_health_facility_coordinate(self, info, inputLatitude, inputLongitude):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_health_facility_perms):
+            raise PermissionDenied(_("unauthorized"))
         # return HealthFacilityCoordinate.objects.all()
         return get_qs_nearby_hfcoord(inputLatitude, inputLongitude, None)
         pass
 
     def resolve_validate_insuree(self, info, phone_number):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_insuree_perms):
+            raise PermissionDenied(_("unauthorized"))
         jot = InsureeTempReg.objects.filter(phone_number=phone_number).first() #(Q(phone_no=phone_number | Q(card_id=card_id))):
         return jot
     
     def resolve_track_registration_status(self, info, phone_no):
-        print('asdasd',phone_no)
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_query_insuree_perms):
+            raise PermissionDenied(_("unauthorized"))
         reg_status = InsureeTempReg.objects.filter(phone_number=phone_no.strip()).first()
         return reg_status
         
