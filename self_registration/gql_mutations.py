@@ -5,25 +5,22 @@ import graphene
 from core.schema import OpenIMISMutation
 from graphql import GraphQLError
 from insuree.schema import InsureeGQLType
+from .apps import SelfRegistrationConfig
 from .models import ChfidTempInsuree
-
-def dfprint(i):
-    print(i)
-    pass
+from django.utils.translation import gettext as _
+from django.core.exceptions import PermissionDenied
 
 
 # format base64 id string
 def fbis64(inp):
     if not inp:
         return inp
-    dfprint('fbis64')
     # NoticeGQLType:38
     # 
     bstr = base64.b64decode(inp)
     sstr = bstr.decode('utf-8')
     istrs = sstr.split(':')
     istr = istrs[1]
-    dfprint([bstr, sstr, istr])
     return istr
 
 
@@ -42,10 +39,13 @@ class ExtendedConnection(Connection):
     edge_count = Int()
 
     def resolve_total_count(root, info, **kwargs):
-        print(root.length)
+        if not info.context.user.is_authenticated:
+            raise PermissionDenied(_("unauthorized"))
         return root.length
 
     def resolve_edge_count(root, info, **kwargs):
+        if not info.context.user.is_authenticated:
+            raise PermissionDenied(_("unauthorized"))
         return len(root.edges)
 
 
@@ -72,12 +72,15 @@ class CreateOrUpdateProfileMutation(graphene.Mutation):
     # @classmethod
     def mutate(self, info, file, insureeCHFID, email, phone):
         files = info.context.FILES
-        print(files)
         insuree_obj = insuree_models.Insuree.objects.filter(chf_id=insureeCHFID).first()
-        print(insuree_obj.pk)
         instance = Profile.objects.filter(insuree_id=insuree_obj.pk).first()
         if not instance:
+            if not info.context.user.has_perms(SelfRegistrationConfig.gql_mutation_add_profile_perms):
+                raise PermissionDenied(_("unauthorized"))
             instance = Profile()
+        else:
+            if not info.context.user.has_perms(SelfRegistrationConfig.gql_mutation_update_profile_perms):
+                raise PermissionDenied(_("unauthorized"))
         instance.photo = files.get('file') if files.get('file') else instance.photo
         instance.email = email if email else instance.email
         instance.phone = phone if phone else instance.phone
@@ -99,6 +102,8 @@ class CreateVoucherPaymentMutation(graphene.Mutation):
 
     # @classmethod
     def mutate(self, info, file, insuree):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_mutation_add_voucher_perms):
+            raise PermissionDenied(_("unauthorized"))
         files = info.context.FILES
         insuree_obj = insuree_models.Insuree.objects.filter(chf_id=insuree).first()
         VoucherPayment.objects.create(voucher=files.get('file'), insuree=insuree_obj)
@@ -142,7 +147,8 @@ class CreateFeedbackMutation(graphene.Mutation):
 
     @classmethod
     def mutate(cls, root, info, **kwargs):
-        print(kwargs)
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_mutation_add_feedback_perms):
+            raise PermissionDenied(_("unauthorized"))
         feedback = Feedback.objects.create(**kwargs)
         return CreateFeedbackMutation(feedback=feedback)
 
@@ -158,7 +164,8 @@ class CreateNoticeMutation(OpenIMISMutation):  # graphene.relay.ClientIDMutation
 
     @classmethod
     def mutate_and_get_payload(cls, root, info, **input):
-        print('CreateNoticeMutation mutate')
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_mutation_add_notification_perms):
+            raise PermissionDenied(_("unauthorized"))
         data = input
         if "client_mutation_id" in data:
             data.pop('client_mutation_id')
@@ -180,14 +187,15 @@ class UpdateNoticeMutation(OpenIMISMutation):
 
     @classmethod
     def mutate_and_get_payload(cls, root, info, **input):
-        dfprint('UpdateNoticeMutation mutate')
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_mutation_update_notification_perms):
+            raise PermissionDenied(_("unauthorized"))
         data = input
         if "client_mutation_id" in data:
             data.pop('client_mutation_id')
         if "client_mutation_label" in data:
             data.pop('client_mutation_label')
         try:
-            notice = Notice.objects.filter(pk=fbis64(input['id']))  # ;dfprint(notice)
+            notice = Notice.objects.filter(pk=fbis64(input['id']))
             notice.update(title=input['title'], description=input['description'])
             return UpdateNoticeMutation(notice=notice)
         except:
@@ -202,6 +210,8 @@ class DeleteNoticeMutation(graphene.Mutation):
 
     @classmethod
     def mutate(self, info, cls, id):
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_mutation_delete_notification_perms):
+            raise PermissionDenied(_("unauthorized"))
         try:
             notice = Notice.objects.filter(pk=id).first()
             notice.active = False  # soft_delete
@@ -224,10 +234,10 @@ class CreateTempRegInsureeMutation(graphene.Mutation):
 
     @classmethod
     def mutate(self, info, cls, **kwargs):
-        dfprint(kwargs)
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_mutation_add_insuree_reg_perms):
+            raise PermissionDenied(_("unauthorized"))
         inp_json = kwargs['json']
         str_json = json.dumps(inp_json)  # stringify json to save imp_json.get("Isurees"]
-        dfprint(str_json)
         jantu = inp_json.get("Insurees")[0]
         phone_number=jantu.get("Phone")
         
@@ -283,7 +293,6 @@ def process_family(args):
 
         }
         family_create["head_insuree_id"] = insuree_.id
-        print('familty-save-after', family_create)
         family = insuree_models.Family.objects.create(**family_create)
         family_id = family.id
     return family_id
@@ -308,10 +317,8 @@ def process_b64photo_write(args):
     return img_name
 
 def process_photo(args):
-    dfprint('process_photo')
     insuree_save = args.get('insuree_save')
     photo = insuree_save.get('B64Photo')  # dbg_tmp_insuree_photo()
-    # print( insuree_models.__dict__ )
 
     save_path=""
     img_name=""
@@ -365,7 +372,6 @@ def process_insuree(args):
         # "audit_user_id" : 1,
     }
     insuree_create["family_id"] = family_id
-    dfprint(insuree_create)
     modelInsuree = insuree_models.Insuree.objects.create(**insuree_create)
     return modelInsuree.pk
     pass
@@ -398,12 +404,12 @@ class CreateInsureeMutation(graphene.Mutation):
 
     @classmethod
     def mutate(self, info, cls, **kwargs):
-        dfprint('CreateInsureeMutation mutate')
+        if not info.context.user.has_perms(SelfRegistrationConfig.gql_mutation_add_insuree_perms):
+            raise PermissionDenied(_("unauthorized"))
         message = ""
         try:
             pk = kwargs['id']  # access Arguments #13 testing
             temp_insuree = InsureeTempReg.objects.filter(pk=pk).first()
-            print('kwargs----------',kwargs)
             if kwargs.get('is_hold'):
                 temp_insuree.is_hold = True
                 temp_insuree.status_message = kwargs.get('status_message')
@@ -447,7 +453,6 @@ class CreateInsureeMutation(graphene.Mutation):
                     temp_insuree.status_message = kwargs.get('statusMessage')
                     temp_insuree.save()
         except Exception as e:
-            print(e)
             import traceback
             traceback.print_exc()
             return CreateInsureeMutation(ok=False, message=message)
